@@ -1,0 +1,19 @@
+# Local overlay for GeForce hosts. The CUDA 12.8 devel base image registers
+# /usr/local/cuda-12.8/compat (driver 570 forward-compatibility libraries) in
+# ldconfig with higher priority than the host driver's injected libcuda, so
+# torch resolves the 570 compat library and fails with CUDA error 804
+# ("forward compatibility was attempted on non supported HW"): the compat
+# package only supports data-center GPUs. Prepending the driver library
+# directory through LD_LIBRARY_PATH (which outranks the ldconfig cache) makes
+# libcuda.so.1 resolve to the host driver again. Keep this overlay directly
+# after compose.yaml in COMPOSE_FILE; it is a host-specific file and must not
+# be exported with offline bundles.
+x-driver-first: &driver-first
+  environment:
+    LD_LIBRARY_PATH: /lib/x86_64-linux-gnu:/usr/local/cuda/lib64
+
+services:
+  serve: *driver-first
+  train: *driver-first
+  dev: *driver-first
+  gpu-check: *driver-first
