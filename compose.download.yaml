@@ -1,0 +1,40 @@
+# Local overlay: download helper with host networking and the local HTTP
+# proxy, for hosts where Hugging Face is unreachable from the Docker bridge.
+# Mirrors the dev service (source + assets + cache mounts) and adds the proxy
+# environment. Host-specific; do not include in offline export bundles.
+services:
+  download:
+    image: ${OPENWAM_IMAGE:-openwam:cu128}
+    platform: linux/amd64
+    pull_policy: never
+    init: true
+    user: "${OPENWAM_UID:-1000}:${OPENWAM_GID:-1000}"
+    shm_size: ${OPENWAM_SHM_SIZE:-16gb}
+    network_mode: host
+    profiles: [download]
+    environment:
+      HF_HUB_OFFLINE: 0
+      TRANSFORMERS_OFFLINE: 0
+      WANDB_MODE: offline
+      HTTP_PROXY: http://127.0.0.1:17897
+      HTTPS_PROXY: http://127.0.0.1:17897
+      NO_PROXY: localhost,127.0.0.1
+    volumes:
+      - type: bind
+        source: ${OPENWAM_CACHE_DIR:-./.cache/docker}
+        target: /cache
+      - type: bind
+        source: ${OPENWAM_OUTPUT_DIR:-./outputs}
+        target: /outputs
+      - type: bind
+        source: ${OPENWAM_SOURCE_DIR:-.}
+        target: /opt/openwam
+      - type: bind
+        source: ${OPENWAM_ASSETS_DIR:-./assets}
+        target: /opt/openwam/assets
+      - type: bind
+        source: ${OPENWAM_OUTPUT_DIR:-./outputs}
+        target: /opt/openwam/outputs
+    command: [bash]
+    stdin_open: true
+    tty: true
